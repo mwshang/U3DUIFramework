@@ -250,6 +250,48 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   panelType: 0
+  curve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 2
+      outSlope: 2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.2675635
+      value: 1.0733663
+      inSlope: 0.70997643
+      outSlope: 0.70997643
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.6140905
+      value: 0.9734462
+      inSlope: -0.3934441
+      outSlope: -0.3934441
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.9936218
+      value: 0.99770355
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!225 &465362991492916306
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -398,11 +440,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 2799866732584536751}
     m_Modifications:
-    - target: {fileID: 2761374872357458279, guid: 7879336ce607a334cbd08d82817ede75,
-        type: 3}
-      propertyPath: m_Name
-      value: CloseButton
-      objectReference: {fileID: 0}
     - target: {fileID: 2761374872357458276, guid: 7879336ce607a334cbd08d82817ede75,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -507,6 +544,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Pivot.y
       value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2761374872357458279, guid: 7879336ce607a334cbd08d82817ede75,
+        type: 3}
+      propertyPath: m_Name
+      value: CloseButton
       objectReference: {fileID: 0}
     - target: {fileID: 2761374872357458275, guid: 7879336ce607a334cbd08d82817ede75,
         type: 3}

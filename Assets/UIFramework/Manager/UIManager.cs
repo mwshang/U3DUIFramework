@@ -78,6 +78,7 @@ public class UIManager
             }            
         }
     }
+        
 
     /// <summary>
     /// 打开面板
@@ -87,38 +88,7 @@ public class UIManager
     /// <param name="arg"></param>
     public void OpenPanel(UIPanelType panelType, bool modal = true, object arg = null)
     {
-        this.OpenPanel(new OpenData(panelType,modal,arg));
-    }
-
-    /// <summary>
-    /// 清理第一个全屏之后的窗体 ,删除掉,释放内存 
-    /// </summary>
-    public void ClearStackPanel() {
-        FirstPanel fistPanel = null;
-        int count = this.panelStack.Count;
-
-        while (count > 0)
-        {
-            count--;
-            OpenData data = this.panelStack[count];
-
-            if (fistPanel == null)
-            {
-                if (data.panel is FirstPanel)
-                {
-                    fistPanel = data.panel as FirstPanel;
-                }
-
-            }
-            else
-            {
-                if (data.panel) {
-                    data.tempDuration = 0;
-                    data.panel.OnExit(data);
-                    data.panel = null;
-                }
-            }
-        }
+        this.OpenPanel(new OpenData(panelType, modal, arg));
     }
 
     /// <summary>
@@ -188,6 +158,40 @@ public class UIManager
             }
         }
     }
+
+    /// <summary>
+    /// 清理第一个全屏之后的窗体 ,删除掉,释放内存 
+    /// </summary>
+    public void ClearStackPanel()
+    {
+        FirstPanel fistPanel = null;
+        int count = this.panelStack.Count;
+
+        while (count > 0)
+        {
+            count--;
+            OpenData data = this.panelStack[count];
+
+            if (fistPanel == null)
+            {
+                if (data.panel is FirstPanel)
+                {
+                    fistPanel = data.panel as FirstPanel;
+                }
+
+            }
+            else
+            {
+                if (data.panel)
+                {
+                    data.tempDuration = 0;
+                    data.panel.OnExit(data);
+                    data.panel = null;
+                }
+            }
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////
     // private
 
