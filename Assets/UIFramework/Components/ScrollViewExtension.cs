@@ -21,6 +21,8 @@ public enum CreateItemDir
 }
 /// <summary>
 /// 针对ScrollView进行优化,只创建视口能展现的几条数据,将该脚本挂在ScrollView组件上
+/// 支持不同尺寸item
+/// 注意item的锚点和pivot需要重合(0.5,0.5)
 /// 必要参数:
 /// createItem:创建item回调函数
 /// initItem:初始化item回调函数
@@ -32,6 +34,7 @@ public enum CreateItemDir
 /// DataProvider:List类型的数据源
 /// 
 /// e.g.
+/// 测试Item Anchors与Pivot都为(0.5,0.5)
 /// sve = scroll.GetComponent<ScrollViewExtension>();
 /// sve.createItem = this.CreateItem;
 /// sve.initItem = this.InitItem;
@@ -73,10 +76,9 @@ public class ScrollViewExtension : MonoBehaviour
     protected int _maxCount = 0;
     protected Vector2 _lastChangeValue = Vector2.zero;
     
-
-    
     // private
     private List<object> _dataProvider;
+    private Dictionary<int,bool> _dicCreated = new Dictionary<int, bool>();
     
 
     private void Awake()
@@ -88,14 +90,11 @@ public class ScrollViewExtension : MonoBehaviour
         if (scrollType == ScrollType.Vertical)
         {            
             _maxCount = (int)(rtViewport.sizeDelta.y / (minItemSize.y + gap.y)) + 1;
-            rtContent.pivot = new Vector2(0.5f, 1f);
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
+            rtContent.pivot = new Vector2(0.5f, 1f);            
         } else
         {
             // TODO
-            scrollRect.horizontal = true;
-            scrollRect.vertical = false;
+            
         }
     }
 
@@ -104,7 +103,20 @@ public class ScrollViewExtension : MonoBehaviour
     void Start()
     {
         scrollRect.onValueChanged.AddListener(OnValueChange);
-        
+
+        if (scrollType == ScrollType.Vertical)
+        {
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.horizontalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+        } else
+        {
+            scrollRect.horizontal = true;
+            scrollRect.vertical = false;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+        }
+
+
     }
 
     public List<object> DataProvider
@@ -179,8 +191,9 @@ public class ScrollViewExtension : MonoBehaviour
         Vector2 pivot = rectTrans.pivot;
 
         // adjust content height
-        if (rectTrans.sizeDelta.y != this.minItemSize.y)
+        if (rectTrans.sizeDelta.y != this.minItemSize.y && !this._dicCreated.TryGet(index))
         {
+            this._dicCreated[index] = true;
             float deltaH = rectTrans.sizeDelta.y - this.minItemSize.y;
             Vector2 size = this.rtContent.sizeDelta;
             size.y += deltaH;
@@ -210,9 +223,6 @@ public class ScrollViewExtension : MonoBehaviour
             rectTrans.anchoredPosition = new Vector3(0, py, rectTrans.position.z);
             _itemList.Insert(0, obj);
         }
-
-
-        
 
         return obj;
     }
