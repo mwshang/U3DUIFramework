@@ -4,21 +4,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-public delegate GameObject CreateItem(object arg);
-public delegate void InitItem(GameObject item, object data);
 
 
-public enum ScrollType
-{
-    Horizontal,
-    Vertical
-}
-
-public enum CreateItemDir
-{
-    UP_2_BOTTTOM,//从上往下创建
-    BOTTOM_2_UP // 从下往上创建
-}
 /// <summary>
 /// 针对ScrollView进行优化,只创建视口能展现的几条数据,将该脚本挂在ScrollView组件上
 /// 支持不同尺寸item
@@ -79,7 +66,22 @@ public class ScrollViewExtension : MonoBehaviour
     // private
     private List<object> _dataProvider;
     private Dictionary<int,bool> _dicCreated = new Dictionary<int, bool>();
-    
+
+    public enum ScrollType
+    {
+        Horizontal,
+        Vertical
+    }
+
+    public enum CreateItemDir
+    {
+        UP_2_BOTTTOM,//从上往下创建
+        BOTTOM_2_UP // 从下往上创建
+    }
+
+    public delegate GameObject CreateItem(object arg);
+    public delegate void InitItem(GameObject item, object data);
+
 
     private void Awake()
     {
@@ -150,7 +152,6 @@ public class ScrollViewExtension : MonoBehaviour
         {
             if (isVertical)
             {
-
                 this.InitContentSize();
 
                 int count = Mathf.Clamp(this._dataProvider.Count, 0, _maxCount);
