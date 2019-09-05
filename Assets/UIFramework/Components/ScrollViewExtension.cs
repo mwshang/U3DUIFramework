@@ -19,6 +19,7 @@ using UnityEngine.EventSystems;
 /// gap:item间距,默认Vector2(0, 2)
 /// scrollType:滚动方向,默认垂直ScrollType.Vertical
 /// DataProvider:List类型的数据源
+/// useCache:是否使用缓存,默认使用,注意必须item大小一致才能使用,不过不一致则需要关闭
 /// 
 /// e.g.
 /// 测试Item Anchors与Pivot都为(0.5,0.5)
@@ -27,6 +28,7 @@ using UnityEngine.EventSystems;
 /// sve.initItem = this.InitItem;
 /// sve.gap = new Vector2(0, 10);
 /// sve.minItemSize = new Vector2(600, 100);
+/// sve.scrollType = ScrollViewExtension.ScrollType.Vertical;
 /// sve.DataProvider = new List<object>();
 /// 
 /// private GameObject CreateItem(object arg)
@@ -45,9 +47,10 @@ public class ScrollViewExtension : MonoBehaviour
     // public    
     public CreateItem createItem;
     public InitItem initItem;
-
     public Vector2 gap = new Vector2(2, 2);
     public Vector2 minItemSize = new Vector2(600,100);
+    // 是否使用缓存,默认使用,注意必须item大小一致才能使用,不过不一致则需要关闭
+    public bool useCache = true;
 
     public ScrollType scrollType = ScrollType.Vertical;
 
@@ -57,7 +60,7 @@ public class ScrollViewExtension : MonoBehaviour
     protected RectTransform rtContent = null;    
 
     protected List<GameObject> _itemList = new List<GameObject>();
-    //protected List<GameObject> _cacheItemList = new List<GameObject>();
+    protected Stack<GameObject> _cacheItemStack;
 
     protected float _totalHeight = 0;
     protected Vector2 _lastChangeValue = Vector2.zero;
@@ -91,6 +94,10 @@ public class ScrollViewExtension : MonoBehaviour
         rtViewport = scrollRect.gameObject.GetComponent<RectTransform>();     
         rtContent = scrollRect.content;
 
+        if (useCache)
+        {
+            _cacheItemStack = new Stack<GameObject>();
+        }
         
     }
 
@@ -158,7 +165,15 @@ public class ScrollViewExtension : MonoBehaviour
     {
         foreach(GameObject obj in _itemList)
         {
-            Destroy(obj);
+            if (useCache)
+            {
+                _cacheItemStack.Push(obj);
+                obj.SetActive(false);
+            }
+            else
+            {
+                Destroy(obj);
+            }
         }
         _itemList.Clear();
         this._dicCreated.Clear();
@@ -221,7 +236,17 @@ public class ScrollViewExtension : MonoBehaviour
 
     protected GameObject CreateListItem(object data, int index)
     {
-        GameObject obj = this.createItem(data);
+        GameObject obj = null;
+
+        if (useCache && this._cacheItemStack.Count > 0)
+        {
+            obj = _cacheItemStack.Pop();
+            obj.SetActive(true);
+        } else
+        {
+            obj = this.createItem(data);            
+        }
+
         obj.name = index.ToString();
         obj.transform.SetParent(this.rtContent.transform, false);
         this.initItem(obj, data);
@@ -366,21 +391,37 @@ public class ScrollViewExtension : MonoBehaviour
             if (p.y < -this.rtViewport.sizeDelta.y - rt.pivot.y * rt.sizeDelta.y)
             {
                 _itemList.RemoveAt(_itemList.Count - 1);
-                Destroy(item);
+                
+                if (useCache)
+                {
+                    _cacheItemStack.Push(item);
+                    item.SetActive(false);                    
+                } else
+                {
+                    Destroy(item);
+                }
             }
 
         }
         else
         {// scroll down
 
-            // 处理第一元素,如果超出了就删除
+            // 处理第一元素,如果超出了就删除            
             GameObject item = _itemList[0];
             RectTransform rt = item.GetComponent<RectTransform>();
             Vector3 p = rt.parent.parent.InverseTransformPoint(rt.position);
             if (p.y > rt.pivot.y * rt.sizeDelta.y)
             {
                 _itemList.RemoveAt(0);
-                Destroy(item);
+                if (useCache)
+                {
+                    _cacheItemStack.Push(item);
+                    item.SetActive(false);
+                }
+                else
+                {
+                    Destroy(item);
+                }
             }
 
             //处理最后一个元素,向上越过底部则创建
@@ -401,15 +442,20 @@ public class ScrollViewExtension : MonoBehaviour
 
     protected void HandleHorizontalValueChanged(bool isScrollRight)
     {
+        if (_itemList.Count == 0)
+        {
+            return;
+        }
         if (isScrollRight)
         {
             // 处理第一元素,如果越过左边,则创建
             GameObject item = _itemList[0];
             RectTransform rt = item.GetComponent<RectTransform>();
             Vector3 p = rt.parent.parent.InverseTransformPoint(rt.position);
-            
+
             if (p.x - rt.pivot.x * rt.sizeDelta.x > 0)
             {
+                
                 int index = int.Parse(item.name) - 1;
                 if (index >= 0)
                 {
@@ -421,13 +467,22 @@ public class ScrollViewExtension : MonoBehaviour
             item = _itemList[_itemList.Count - 1];
             rt = item.GetComponent<RectTransform>();
             p = rt.parent.parent.InverseTransformPoint(rt.position);
-            if (p.y > this.rtViewport.sizeDelta.x + rt.pivot.x * rt.sizeDelta.x)
+            if (p.x > this.rtViewport.sizeDelta.x + rt.pivot.x * rt.sizeDelta.x)
             {
                 _itemList.RemoveAt(_itemList.Count - 1);
-                Destroy(item);
+                if (useCache)
+                {
+                    
+                    _cacheItemStack.Push(item);
+                    item.SetActive(false);
+                }
+                else
+                {
+                    Destroy(item);
+                }
             }
 
-        } else
+        } else 
         {
             
             // 处理第一元素,如果超出了就删除
@@ -438,7 +493,15 @@ public class ScrollViewExtension : MonoBehaviour
             if (p.x < rt.pivot.x * (1 - rt.sizeDelta.x))
             {
                 _itemList.RemoveAt(0);
-                Destroy(item);
+                if (useCache)
+                {
+                    _cacheItemStack.Push(item);
+                    item.SetActive(false);
+                }
+                else
+                {
+                    Destroy(item);
+                }
             }
 
             //处理最后一个元素,向上越过底部则创建
