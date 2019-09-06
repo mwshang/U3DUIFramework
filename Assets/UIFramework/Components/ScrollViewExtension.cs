@@ -199,7 +199,7 @@ public class ScrollViewExtension : MonoBehaviour
                 {
                     object data = this._dataProvider[i];
                     this.CreateVerticalItem(data, i, CreateItemDir.SCROLL_DOWN);
-                }
+                }                
                 scrollRect.verticalScrollbar.value = 1;
             } else
             {
@@ -280,8 +280,7 @@ public class ScrollViewExtension : MonoBehaviour
             {
                 GameObject lastItem = _itemList[_itemList.Count - 1];
                 RectTransform lastRT = lastItem.GetComponent<RectTransform>();
-                py += lastRT.anchoredPosition.y - lastRT.sizeDelta.y * (1 - lastRT.pivot.y);
-                py -= this.gap.y;
+                py += lastRT.anchoredPosition.y - lastRT.sizeDelta.y * lastRT.pivot.y - this.gap.y;
             }
             rectTrans.anchoredPosition = new Vector3(0, py, rectTrans.position.z);
 
@@ -290,8 +289,8 @@ public class ScrollViewExtension : MonoBehaviour
         {
             GameObject fstItem = _itemList[0];
             RectTransform fstRT = fstItem.GetComponent<RectTransform>();
-            float py = fstRT.sizeDelta.y * fstRT.pivot.y;
-            py += fstRT.anchoredPosition.y + this.gap.y + rectTrans.sizeDelta.y * pivot.y;
+            float py = fstRT.anchoredPosition.y + fstRT.sizeDelta.y * (1 - fstRT.pivot.y) + this.gap.y;
+            py += rectTrans.sizeDelta.y * pivot.y;
             rectTrans.anchoredPosition = new Vector3(0, py, rectTrans.position.z);
             _itemList.Insert(0, obj);
         }
@@ -367,15 +366,15 @@ public class ScrollViewExtension : MonoBehaviour
 
     protected void HandleVerticalValueChanged(bool isScrollUp)
     {
+
         if (isScrollUp)
         {// scroll up
-
             // 处理第一元素,如果向下越过顶部,则创建
             GameObject item = _itemList[0];
             RectTransform rt = item.GetComponent<RectTransform>();
             Vector3 p = rt.parent.parent.InverseTransformPoint(rt.position);
 
-            if (p.y < -(rt.pivot.y * rt.sizeDelta.y + this.gap.y))
+            if (p.y < -((1 - rt.pivot.y) * rt.sizeDelta.y))
             {
                 int index = int.Parse(item.name) - 1;
                 if (index >= 0)
@@ -405,11 +404,11 @@ public class ScrollViewExtension : MonoBehaviour
         }
         else
         {// scroll down
-
             // 处理第一元素,如果超出了就删除            
             GameObject item = _itemList[0];
             RectTransform rt = item.GetComponent<RectTransform>();
             Vector3 p = rt.parent.parent.InverseTransformPoint(rt.position);
+
             if (p.y > rt.pivot.y * rt.sizeDelta.y)
             {
                 _itemList.RemoveAt(0);

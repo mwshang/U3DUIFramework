@@ -10,5 +10,8 @@ public enum UIPanelType
     Shop,
     Skill,
     System,
-    Task
+    Task,
+
+    WordPuzzleIndex,
+    WordPuzzleLevels
 }
