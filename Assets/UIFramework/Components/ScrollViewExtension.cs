@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-
+using System.Collections.Generic;
+using DG.Tweening;
 
 
 /// <summary>
@@ -70,6 +71,10 @@ public class ScrollViewExtension : MonoBehaviour
     private Dictionary<int,bool> _dicCreated = new Dictionary<int, bool>();
     private bool isInited = false;
 
+    ///////////////////////
+    // Expand logic
+    private bool isExpanding = false;
+
     public enum ScrollType
     {
         Horizontal,
@@ -122,7 +127,7 @@ public class ScrollViewExtension : MonoBehaviour
             Vector2 sizeDelta = scrollRect.verticalScrollbar.GetComponent<RectTransform>().sizeDelta;
             sizeDelta.y = this.rtViewport.sizeDelta.y;
             rt.sizeDelta = sizeDelta;
-            //解决滑动条位置偏移问题
+            //解决滑动条位置偏移问题,这块还有问题,用到滑动条的不多,有用到在解决
             rt.anchoredPosition = new Vector2(rt.anchoredPosition.x,rtViewport.sizeDelta.y);
         } else
         {
@@ -229,8 +234,7 @@ public class ScrollViewExtension : MonoBehaviour
             float contentWidth = this._dataProvider.Count * minItemSize.x + (this._dataProvider.Count - 1) * this.gap.x;
             this.rtContent.sizeDelta = new Vector2(contentWidth, this.rtViewport.sizeDelta.y);
             this.rtContent.anchoredPosition = new Vector2(this.rtContent.anchoredPosition.x, 0);
-            
-            
+  
         }
     }
 
@@ -252,6 +256,30 @@ public class ScrollViewExtension : MonoBehaviour
         this.initItem(obj, data);
         return obj;
     }
+
+    protected void OnValueChange(Vector2 pos)
+    {
+        if (this._dataProvider == null || this._dataProvider.Count == 0 || !this.isInited)
+        {
+            return;
+        }
+
+        if (scrollType == ScrollType.Vertical)
+        {
+            this.HandleVerticalValueChanged(pos.y - _lastChangeValue.y > 0);
+        }
+        else
+        {
+            this.HandleHorizontalValueChanged(pos.x - _lastChangeValue.x < 0);
+        }
+        _lastChangeValue = pos;
+
+
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////
+    ///  竖向滚动逻辑
+    //////////////////////////////////////////////////////////////////////////////////////
 
     protected GameObject CreateVerticalItem(object data,int index, CreateItemDir dir)
     {
@@ -296,73 +324,7 @@ public class ScrollViewExtension : MonoBehaviour
         }
 
         return obj;
-    }
-    
-    protected GameObject CreateHorizontalItem(object data, int index, CreateItemDir dir)
-    {
-        GameObject obj = this.CreateListItem(data, index);
-
-        RectTransform rectTrans = obj.GetComponent<RectTransform>();
-        rectTrans.anchorMin = new Vector2(0f, 0.5f);
-        rectTrans.anchorMax = new Vector2(0f, 0.5f);
-        Vector2 pivot = rectTrans.pivot;
-
-        // adjust content height
-        if (rectTrans.sizeDelta.x != this.minItemSize.x && !this._dicCreated.TryGet(index))
-        {
-            this._dicCreated[index] = true;
-            float deltaW = rectTrans.sizeDelta.x - this.minItemSize.x;
-            Vector2 size = this.rtContent.sizeDelta;
-            size.x += deltaW;
-            this.rtContent.sizeDelta = size;
-        }
-        if (dir == CreateItemDir.SCROLL_RIGHT)
-        {
-            float px = -rectTrans.sizeDelta.x * pivot.x;
-
-            GameObject lastItem = _itemList[0];
-            RectTransform lastRT = lastItem.GetComponent<RectTransform>();
-            px += lastRT.anchoredPosition.x - lastRT.sizeDelta.x * lastRT.pivot.x;
-            px -= this.gap.x;
-            rectTrans.anchoredPosition = new Vector3(px, 0, rectTrans.position.z);
-
-            
-            _itemList.Insert(0, obj);
-        }
-        else
-        {
-            float px = rectTrans.sizeDelta.x * pivot.x;
-            if (_itemList.Count > 0)
-            {
-                GameObject fstItem = _itemList[0];
-                RectTransform fstRT = fstItem.GetComponent<RectTransform>();
-                px += fstRT.sizeDelta.x * fstRT.pivot.x;
-                px += fstRT.anchoredPosition.x + this.gap.x;
-            }
-            rectTrans.anchoredPosition = new Vector3(px, 0, rectTrans.position.z);
-            _itemList.Add(obj);
-        }
-        return obj;
-    }
-        
-    protected void OnValueChange(Vector2 pos)
-    {
-        if (this._dataProvider == null || this._dataProvider.Count == 0 || !this.isInited)
-        {
-            return;
-        }
-        
-       if (scrollType == ScrollType.Vertical)
-        {
-            this.HandleVerticalValueChanged(pos.y - _lastChangeValue.y > 0);            
-        } else
-        {
-            this.HandleHorizontalValueChanged(pos.x - _lastChangeValue.x < 0);
-        }
-        _lastChangeValue = pos;
-
-        
-    }
+    }    
 
     protected void HandleVerticalValueChanged(bool isScrollUp)
     {
@@ -439,6 +401,9 @@ public class ScrollViewExtension : MonoBehaviour
         }
     }
 
+    //////////////////////////////////////////////////////////////////////////////////////
+    /// 横向滚动逻辑
+    //////////////////////////////////////////////////////////////////////////////////////
     protected void HandleHorizontalValueChanged(bool isScrollRight)
     {
         if (_itemList.Count == 0)
@@ -517,5 +482,153 @@ public class ScrollViewExtension : MonoBehaviour
                 }
             }
         }
+    }
+    protected GameObject CreateHorizontalItem(object data, int index, CreateItemDir dir)
+    {
+        GameObject obj = this.CreateListItem(data, index);
+
+        RectTransform rectTrans = obj.GetComponent<RectTransform>();
+        rectTrans.anchorMin = new Vector2(0f, 0.5f);
+        rectTrans.anchorMax = new Vector2(0f, 0.5f);
+        Vector2 pivot = rectTrans.pivot;
+
+        // adjust content height
+        if (rectTrans.sizeDelta.x != this.minItemSize.x && !this._dicCreated.TryGet(index))
+        {
+            this._dicCreated[index] = true;
+            float deltaW = rectTrans.sizeDelta.x - this.minItemSize.x;
+            Vector2 size = this.rtContent.sizeDelta;
+            size.x += deltaW;
+            this.rtContent.sizeDelta = size;
+        }
+        if (dir == CreateItemDir.SCROLL_RIGHT)
+        {
+            float px = -rectTrans.sizeDelta.x * pivot.x;
+
+            GameObject lastItem = _itemList[0];
+            RectTransform lastRT = lastItem.GetComponent<RectTransform>();
+            px += lastRT.anchoredPosition.x - lastRT.sizeDelta.x * lastRT.pivot.x;
+            px -= this.gap.x;
+            rectTrans.anchoredPosition = new Vector3(px, 0, rectTrans.position.z);
+
+
+            _itemList.Insert(0, obj);
+        }
+        else
+        {
+            float px = rectTrans.sizeDelta.x * pivot.x;
+            if (_itemList.Count > 0)
+            {
+                GameObject fstItem = _itemList[0];
+                RectTransform fstRT = fstItem.GetComponent<RectTransform>();
+                px += fstRT.sizeDelta.x * fstRT.pivot.x;
+                px += fstRT.anchoredPosition.x + this.gap.x;
+            }
+            rectTrans.anchoredPosition = new Vector3(px, 0, rectTrans.position.z);
+            _itemList.Add(obj);
+        }
+        return obj;
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////
+    /// Item扩展逻辑
+    //////////////////////////////////////////////////////////////////////////////////////
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="arg">{GameObject item,Vector2 to;float duration;默认0.3f,注意是float类型的}</param>
+    public void OnExpandItem(object arg)
+    {
+        if (isExpanding || this._itemList.Count == 0)
+        {
+            return;
+        }
+        //isExpanding = true;
+        System.Type type = arg.GetType();
+
+        GameObject item = (GameObject)(type.GetProperty("item").GetValue(arg));
+        Vector2 to = (Vector2)(type.GetProperty("to").GetValue(arg));
+        
+        float duration = 0.3f;
+        if (type.GetProperty("duration") != null)
+        {
+            duration = (float)(type.GetProperty("duration").GetValue(arg));
+        }
+            
+
+        duration = Mathf.Clamp(duration, 0.3f, 100);
+
+        List<object> groups = this.getGroupByItem(item);
+        List<GameObject> pres = (List<GameObject>)groups[0];
+        List<GameObject> afters = (List<GameObject>)groups[1];
+
+        RectTransform itemRT = item.GetComponent<RectTransform>();
+        Vector2 deltaSize = to - itemRT.sizeDelta;
+        // expand item
+        itemRT.DOSizeDelta(to, duration).OnComplete(() => {
+            isExpanding = false;
+        });
+        
+        float dy = deltaSize.y;
+
+        Vector2 p = itemRT.parent.parent.InverseTransformPoint(itemRT.position);
+        float py = p.y + itemRT.sizeDelta.y * 0.5f;
+        float viewMidY = -this.rtViewport.sizeDelta.y * 0.5f;
+        float dmy = py - viewMidY;
+
+
+
+            // 将前面的items向上移动
+        if (pres.Count > 0)
+        {
+            
+            foreach(GameObject go in pres)
+            {
+                RectTransform goRT = go.transform as RectTransform;
+                goRT.DOAnchorPosY(goRT.anchoredPosition.y + dy,duration);  
+            }
+        }
+        // 将后面的items向下移动
+        if (afters.Count > 0)
+        {
+            foreach (GameObject go in afters)
+            {
+                RectTransform goRT = go.transform as RectTransform;
+                goRT.DOAnchorPosY(goRT.anchoredPosition.y - dy, duration);
+            }
+        }
+
+    }
+
+    protected List<object> getGroupByItem(GameObject item)
+    {
+        List<object> rst = new List<object>();
+        List<GameObject> pres = new List<GameObject>();
+        List<GameObject> afters = new List<GameObject>();
+
+        bool found = false;
+
+        foreach(GameObject obj in this._itemList)
+        {
+            if (obj == item)
+            {
+                found = true;
+            } else
+            {
+                if (found)
+                {
+                    afters.Add(obj);
+                } else
+                {
+                    pres.Add(obj);
+                }
+            }
+        }
+
+        rst.Add(pres);
+        rst.Add(afters);
+
+        return rst;
     }
 }
