@@ -9,7 +9,7 @@ using DG.Tweening;
 
 /// <summary>
 /// 针对ScrollView进行优化,只创建视口能展现的几条数据,将该脚本挂在ScrollView组件上
-/// 支持不同尺寸item
+/// 支持不同尺寸item,支持item扩大缩小功能,参见 OnExpandItem接口
 /// 注意item的锚点和pivot需要重合(0.5,0.5)
 /// 必要参数:
 /// createItem:创建item回调函数
@@ -65,6 +65,7 @@ public class ScrollViewExtension : MonoBehaviour
 
     protected float _totalHeight = 0;
     protected Vector2 _lastChangeValue = Vector2.zero;
+    protected int _displayCount = 1;
     
     // private
     private List<object> _dataProvider;
@@ -91,6 +92,7 @@ public class ScrollViewExtension : MonoBehaviour
 
     public delegate GameObject CreateItem(object arg);
     public delegate void InitItem(GameObject item, object data);
+    public delegate void ExpandCompleteCallback();
 
 
     private void Awake()
@@ -192,13 +194,11 @@ public class ScrollViewExtension : MonoBehaviour
         {
             this.InitContentSize();
 
-            int _maxCount = 0;
-
             if (isVertical)
             {
-                _maxCount = (int)(rtViewport.sizeDelta.y / (minItemSize.y + gap.y)) + 1;
+                _displayCount = (int)(rtViewport.sizeDelta.y / (minItemSize.y + gap.y)) + 1;
 
-                int count = Mathf.Clamp(this._dataProvider.Count, 0, _maxCount);
+                int count = Mathf.Clamp(this._dataProvider.Count, 0, _displayCount);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -208,8 +208,8 @@ public class ScrollViewExtension : MonoBehaviour
                 scrollRect.verticalScrollbar.value = 1;
             } else
             {
-                _maxCount = (int)(rtViewport.sizeDelta.x / (minItemSize.x + gap.x)) + 1;
-                int count = Mathf.Clamp(this._dataProvider.Count, 0, _maxCount);
+                _displayCount = (int)(rtViewport.sizeDelta.x / (minItemSize.x + gap.x)) + 1;
+                int count = Mathf.Clamp(this._dataProvider.Count, 0, _displayCount);
                 for (int i = 0; i < count; i++)
                 {
                     object data = this._dataProvider[i];
@@ -535,7 +535,16 @@ public class ScrollViewExtension : MonoBehaviour
     //////////////////////////////////////////////////////////////////////////////////////
 
     /// <summary>
-    /// 
+    /// 伸缩ITEM
+    /// e.g.
+    /// if (isSelected)
+    ///{   //扩大
+    ///   this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 335) });
+    ///}
+    ///else
+    ///{   //缩小
+    ///    this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 235) });
+    ///}
     /// </summary>
     /// <param name="arg">{GameObject item,Vector2 to;float duration;默认0.3f,注意是float类型的}</param>
     public void OnExpandItem(object arg)
@@ -544,67 +553,101 @@ public class ScrollViewExtension : MonoBehaviour
         {
             return;
         }
-        //isExpanding = true;
-        System.Type type = arg.GetType();
+        isExpanding = true;
 
+        //  获取参数
+        System.Type type = arg.GetType();
         GameObject item = (GameObject)(type.GetProperty("item").GetValue(arg));
         Vector2 to = (Vector2)(type.GetProperty("to").GetValue(arg));
-        
+
         float duration = 0.3f;
         if (type.GetProperty("duration") != null)
         {
             duration = (float)(type.GetProperty("duration").GetValue(arg));
         }
-            
+        ExpandCompleteCallback onComplete = null;
+        if (type.GetProperty("onComplete")  != null)
+        {
+            onComplete = (ExpandCompleteCallback)(type.GetProperty("onComplete").GetValue(arg));
+        }
+        //==
+
 
         duration = Mathf.Clamp(duration, 0.3f, 100);
 
-        List<object> groups = this.getGroupByItem(item);
-        List<GameObject> pres = (List<GameObject>)groups[0];
-        List<GameObject> afters = (List<GameObject>)groups[1];
 
         RectTransform itemRT = item.GetComponent<RectTransform>();
         Vector2 deltaSize = to - itemRT.sizeDelta;
-        // expand item
-        itemRT.DOSizeDelta(to, duration).OnComplete(() => {
-            isExpanding = false;
-        });
-        
-        float dy = deltaSize.y;
 
         Vector2 p = itemRT.parent.parent.InverseTransformPoint(itemRT.position);
-        float py = p.y + itemRT.sizeDelta.y * 0.5f;
+        // 注意,item anchors为(0.5,1)计算的
+        float itemMidY = p.y - itemRT.sizeDelta.y * 0.5f;
         float viewMidY = -this.rtViewport.sizeDelta.y * 0.5f;
-        float dmy = py - viewMidY;
+        float s = itemMidY - viewMidY;
 
+        float maxMoveH = this.rtContent.sizeDelta.y - this.rtViewport.sizeDelta.y - this.rtContent.anchoredPosition.y;
 
+        //
+        if (maxMoveH < 0) maxMoveH = 0;
+        s = Mathf.Min(s, maxMoveH);
 
-            // 将前面的items向上移动
-        if (pres.Count > 0)
-        {
-            
-            foreach(GameObject go in pres)
+        //  上部分 的位置保持不变,设置 sizeDelta时位置 会变化
+        Vector2 pos = this.rtContent.anchoredPosition;
+        pos.y = pos.y - deltaSize.y * 0.5f;
+        this.rtContent.sizeDelta = new Vector2(this.rtContent.sizeDelta.x, this.rtContent.sizeDelta.y + deltaSize.y);
+        this.rtContent.anchoredPosition = pos;
+        //===
+
+        if (s < -this.rtViewport.sizeDelta.y * 0.15)
+        {//向上移动到中间位置
+
+            float itemIndex = int.Parse(item.name);
+            bool notLastItem = (itemIndex <= this._dataProvider.Count - _displayCount);
+            if (!notLastItem)
             {
-                RectTransform goRT = go.transform as RectTransform;
-                goRT.DOAnchorPosY(goRT.anchoredPosition.y + dy,duration);  
+                s = -deltaSize.y;
             }
+            this.rtContent.DOAnchorPosY(this.rtContent.anchoredPosition.y - s, duration).OnComplete(() =>
+            {
+                this._doExpanding(item, to, deltaSize, duration, onComplete);
+            });
         }
+        else
+        {
+            this._doExpanding(item, to, deltaSize, duration, onComplete);
+        }
+
+    }
+    
+
+    protected void  _doExpanding(GameObject item,Vector2 to, Vector2 deltaSize, float duration, ExpandCompleteCallback onComplete=null)
+    {
+        RectTransform itemRT = item.GetComponent<RectTransform>();
+        List<GameObject> afters = this.getGroupByItem(item);
+
+        // expand item
+        itemRT.DOSizeDelta(to, duration).OnComplete(() =>
+        {
+            isExpanding = false;
+            if (onComplete != null)
+            {
+                onComplete();
+            }
+        });
+
         // 将后面的items向下移动
         if (afters.Count > 0)
         {
             foreach (GameObject go in afters)
             {
                 RectTransform goRT = go.transform as RectTransform;
-                goRT.DOAnchorPosY(goRT.anchoredPosition.y - dy, duration);
+                goRT.DOAnchorPosY(goRT.anchoredPosition.y - deltaSize.y, duration);
             }
         }
-
     }
 
-    protected List<object> getGroupByItem(GameObject item)
+    protected List<GameObject> getGroupByItem(GameObject item)
     {
-        List<object> rst = new List<object>();
-        List<GameObject> pres = new List<GameObject>();
         List<GameObject> afters = new List<GameObject>();
 
         bool found = false;
@@ -614,21 +657,13 @@ public class ScrollViewExtension : MonoBehaviour
             if (obj == item)
             {
                 found = true;
-            } else
+            } else if (found)
             {
-                if (found)
-                {
-                    afters.Add(obj);
-                } else
-                {
-                    pres.Add(obj);
-                }
+                afters.Add(obj);
             }
+
         }
 
-        rst.Add(pres);
-        rst.Add(afters);
-
-        return rst;
+        return afters;
     }
 }

@@ -14,6 +14,8 @@ public class LevelItem : MonoBehaviour
     private Transform FstLevels;
     private Transform SndtLevels;
 
+    private static GameObject lastExpanedItem  = null;
+
 
     private void Awake()
     {
@@ -39,18 +41,39 @@ public class LevelItem : MonoBehaviour
         bool isSelected = (bool)arg.GetType().GetProperty("isSelected").GetValue(arg);
         //Debug.Log("isSelected:"+isSelected);
         RectTransform rt = this.transform as RectTransform;
-        if (isSelected)
-        {
-            //rt.DOSizeDelta(new Vector2(500, 335), 0.3f).OnComplete(() => {
-            //    //Debug.Log("ssssssssssssssssssss");
-            //});
 
-            this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 335) });
-        }
-        else
+        
+
+        if  (lastExpanedItem !=  null)
         {
-            //rt.DOSizeDelta(new Vector2(500, 235), 0.3f);
-            this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 235) });
+            ScrollViewExtension.ExpandCompleteCallback onComplete = ()=> {
+                if (isSelected)
+                {
+                    lastExpanedItem = this.gameObject;
+                    this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 335) });
+                }
+                else
+                {
+                    //rt.DOSizeDelta(new Vector2(500, 235), 0.3f);
+                    this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 235) });
+                }
+            };
+
+            this.gameObject.SendMessageUpwards("OnExpandItem", new { item = lastExpanedItem, to = new Vector2(500, 235), onComplete= onComplete });
+            lastExpanedItem = null;
+        } else
+        {
+            if (isSelected)
+            {
+                lastExpanedItem = this.gameObject;
+                this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 335) });
+            }
+            else
+            {
+                this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 235) });
+            }
         }
+
+        
     }
 }
