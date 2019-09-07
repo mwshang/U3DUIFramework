@@ -44,7 +44,6 @@ public class ShopPanel : FirstPanel
         {
             obj = Instantiate(TileItemPrefab1);
         }
-        Debug.Log("Create Item");
 
         return obj;
     }

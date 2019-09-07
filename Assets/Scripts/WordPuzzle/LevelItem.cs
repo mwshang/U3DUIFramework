@@ -42,9 +42,7 @@ public class LevelItem : MonoBehaviour
         //Debug.Log("isSelected:"+isSelected);
         RectTransform rt = this.transform as RectTransform;
 
-        
-
-        if  (lastExpanedItem !=  null)
+        if  (lastExpanedItem !=  null  && lastExpanedItem != this.gameObject)
         {
             ScrollViewExtension.ExpandCompleteCallback onComplete = ()=> {
                 if (isSelected)

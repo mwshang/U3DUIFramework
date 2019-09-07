@@ -42,6 +42,48 @@ using DG.Tweening;
 ///{
 /// }
 /// 
+/// expand demo:
+/// 多条item扩展
+/// if (isSelected)
+/// {
+///     lastExpanedItem = this.gameObject;
+///     this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 335) });
+/// }
+/// else
+/// {
+///     this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 235) });
+/// }
+/// 或则天条item扩展:
+/// if  (lastExpanedItem !=  null  && lastExpanedItem != this.gameObject)
+/// {
+///     ScrollViewExtension.ExpandCompleteCallback onComplete = ()=> {
+///         if (isSelected)
+///         {
+///             lastExpanedItem = this.gameObject;
+///             this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 335) });
+///         }
+///         else
+///         {
+///             //rt.DOSizeDelta(new Vector2(500, 235), 0.3f);
+///             this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 235) });
+///         }
+///     };
+///     this.gameObject.SendMessageUpwards("OnExpandItem", new { item = lastExpanedItem, to = new Vector2(500, 235), onComplete= onComplete });
+///     lastExpanedItem = null;
+/// } else
+/// {
+///     if (isSelected)
+///     {
+///         lastExpanedItem = this.gameObject;
+///         this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 335) });
+///     }
+///     else
+///     {
+///         this.gameObject.SendMessageUpwards("OnExpandItem", new { item = this.gameObject, to = new Vector2(500, 235) });
+///     }
+/// }
+/// 
+/// 
 /// </summary>
 public class ScrollViewExtension : MonoBehaviour
 {
