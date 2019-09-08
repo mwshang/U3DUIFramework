@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
+using System;
 
-public class LevelItem : MonoBehaviour
+public class LevelItem : MonoBehaviour,ICacheItem
 {
     private Transform shadow;
     private Transform container;
@@ -15,6 +16,8 @@ public class LevelItem : MonoBehaviour
     private Transform SndtLevels;
 
     private static GameObject lastExpanedItem  = null;
+
+    private object data;
 
 
     private void Awake()
@@ -34,7 +37,9 @@ public class LevelItem : MonoBehaviour
         {
             SndTitle.text = data.ToString();
         }
-        
+        this.data = data;
+
+
     }
     public void OnFstLevelSelected(object arg)
     {
@@ -73,5 +78,15 @@ public class LevelItem : MonoBehaviour
         }
 
         
+    }
+
+    public object GetTypeByAttri(string attri)
+    {
+        return this.data.GetType().GetProperty(attri).GetValue(this.data);
+    }
+
+    public object GetCacheItemData()
+    {
+        return this.data;
     }
 }

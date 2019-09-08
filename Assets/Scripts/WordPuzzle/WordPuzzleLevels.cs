@@ -19,14 +19,15 @@ public class WordPuzzleLevels : FirstPanel
         sve.createItem = this.CreateItem;
         sve.initItem = this.InitItem;
         sve.gap = new Vector2(10, 10);
-        sve.useCache = false;
+        sve.useCache = true;
         //sve.minItemSize = new Vector2(600, 100);
         sve.scrollType = ScrollViewExtension.ScrollType.Vertical;
+        sve.cacheKey = "key";
 
         List<object> list = new List<object>();
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < 50; i++)
         {
-            list.Add(i);
+            list.Add(new { id = i, key = i % 2 == 0 ? 0 : 1 });
         }
         sve.DataProvider = list;
     }
@@ -34,8 +35,8 @@ public class WordPuzzleLevels : FirstPanel
     private GameObject CreateItem(object arg)
     {
         GameObject obj = null;
-
-        int index = int.Parse(arg.ToString());
+        object key = arg.GetType().GetProperty("key").GetValue(arg);
+        int index = int.Parse(key.ToString());
 
         if (index == 0)
         {
@@ -45,18 +46,34 @@ public class WordPuzzleLevels : FirstPanel
         {
             obj = Instantiate(TileItemPrefab1);
         }
-        //Debug.Log("Create Item:" + arg);
+        Debug.Log("Create Item:*******************" + arg);
 
         return obj;
     }
     private void InitItem(GameObject item, object data)
     {
         //item.transform.Find("Text").GetComponent<Text>().text = data.ToString();
-        LevelItem itemScript = item.GetComponent<LevelItem>();
-        if (itemScript)
+
+        object val = data.GetType().GetProperty("key").GetValue(data);
+        int key = int.Parse(val.ToString());
+
+        if (key==1)
         {
-            itemScript.SetData(data);
+            LevelItem itemScript = item.GetComponent<LevelItem>();
+            if (itemScript)
+            {
+                itemScript.SetData(data);
+            }
+        } else
+        {
+            TitleItem itemScript = item.GetComponent<TitleItem>();
+            if (itemScript)
+            {
+                itemScript.SetData(data);
+            }
         }
+
+        
         
     }
 

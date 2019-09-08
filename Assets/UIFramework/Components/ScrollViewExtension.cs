@@ -15,12 +15,19 @@ using DG.Tweening;
 /// createItem:创建item回调函数
 /// initItem:初始化item回调函数
 /// minItemSize:item尺寸
+/// DataProvider:List类型的数据源
 /// 
 /// 非必要参数:
 /// gap:item间距,默认Vector2(0, 2)
 /// scrollType:滚动方向,默认垂直ScrollType.Vertical
-/// DataProvider:List类型的数据源
-/// useCache:是否使用缓存,默认使用,注意必须item大小一致才能使用,不过不一致则需要关闭
+/// useCache:是否使用缓存,默认使用,注意item需要实现ICacheItem接口,否则会 出现 缓存失败
+/// cacheKey:数据源的属性名,为了支持不同大小的 item需要 分类 存储
+/// 
+/// 使用缓存功能注意事项:
+/// ScrollViewExtension  sve;
+/// sve.useCache = true;
+/// sve.cacheKey = "xxx";
+/// 
 /// 
 /// e.g.
 /// 测试Item Anchors与Pivot都为(0.5,0.5)
@@ -92,8 +99,9 @@ public class ScrollViewExtension : MonoBehaviour
     public InitItem initItem;
     public Vector2 gap = new Vector2(2, 2);
     public Vector2 minItemSize = new Vector2(600,100);
-    // 是否使用缓存,默认使用,注意必须item大小一致才能使用,不过不一致则需要关闭
+    // 是否使用缓存,默认使用,注意为了支持不同大小的 item,需要实现ICacheItem接口
     public bool useCache = true;
+    public string cacheKey = null;//数据源的属性名,为了支持不同大小的 item需要 分类 存储
 
     public ScrollType scrollType = ScrollType.Vertical;
 
@@ -103,7 +111,8 @@ public class ScrollViewExtension : MonoBehaviour
     protected RectTransform rtContent = null;    
 
     protected List<GameObject> _itemList = new List<GameObject>();
-    protected Stack<GameObject> _cacheItemStack;
+    protected Dictionary<object,Stack<GameObject>> _cacheItemStack;
+
 
     protected float _totalHeight = 0;
     protected Vector2 _lastChangeValue = Vector2.zero;
@@ -145,7 +154,7 @@ public class ScrollViewExtension : MonoBehaviour
 
         if (useCache)
         {
-            _cacheItemStack = new Stack<GameObject>();
+            _cacheItemStack = new Dictionary<object, Stack<GameObject>>();
         }
         
     }
@@ -209,6 +218,11 @@ public class ScrollViewExtension : MonoBehaviour
         }
     }
 
+    public  List<GameObject>  GetItemList()
+    {
+        return this._itemList;
+    }
+
 
     protected void Clear()
     {
@@ -216,8 +230,7 @@ public class ScrollViewExtension : MonoBehaviour
         {
             if (useCache)
             {
-                _cacheItemStack.Push(obj);
-                obj.SetActive(false);
+                this.PushItem2Cache(obj);
             }
             else
             {
@@ -227,6 +240,81 @@ public class ScrollViewExtension : MonoBehaviour
         _itemList.Clear();
         this._dicCreated.Clear();
     }
+
+    protected object GetCacheKey(object data)
+    {
+        if (data == null)
+        {
+            Debug.LogWarning("ScrollViewExtension::GetCacheKey  data is null,cache item maybe failed!!!!!!");
+        }
+        object rst = null;
+        if (data !=  null && !string.IsNullOrEmpty(cacheKey))
+        {
+            System.Type type = data.GetType();
+            rst = type.GetProperty(cacheKey).GetValue(data);
+        }
+        if (rst == null)
+        {
+            rst = "default";
+        }
+        return rst;
+    }
+
+    protected Stack<GameObject> GetCacheStack(GameObject obj)
+    {
+        ICacheItem cacheItem = obj.GetComponent<ICacheItem>();
+        if (cacheItem == null)
+        {
+            Debug.LogWarning("ScrollViewExtension::GetCacheStack  ICacheItem is null,cache item maybe failed!!!!!!");
+        }
+        object value = this.GetCacheKey(cacheItem != null? cacheItem.GetCacheItemData():null);
+        Stack<GameObject> stack = _cacheItemStack.TryGet(value);
+        if (stack == null)
+        {
+            stack = new Stack<GameObject>();
+            _cacheItemStack[value] = stack;
+        }
+        return stack;
+    }
+   
+
+    protected void PushItem2Cache(GameObject obj)
+    {
+        Stack<GameObject> stack = this.GetCacheStack(obj);
+        stack.Push(obj);
+        obj.SetActive(false);
+    }
+    protected GameObject PopItemFromCache(object key)
+    {
+        if (key == null)
+        {
+            key = "default";
+        }
+        Stack<GameObject> stack = _cacheItemStack.TryGet(key);
+        if  (stack  ==  null)
+        {
+            return null;
+        }
+
+        GameObject  obj = stack.Pop();
+        obj.SetActive(true);
+        return obj;
+    }
+
+    protected bool hasCachItem(object  key)
+    {
+        if (key == null)
+        {
+            key = "default";
+        }
+        Stack<GameObject> stack = _cacheItemStack.TryGet(key);
+        if (stack == null)
+        {
+            return false;
+        }
+        return stack.Count > 0;
+    }
+    
 
     protected void GenerateList()
     {
@@ -283,13 +371,13 @@ public class ScrollViewExtension : MonoBehaviour
     protected GameObject CreateListItem(object data, int index)
     {
         GameObject obj = null;
-
-        if (useCache && this._cacheItemStack.Count > 0)
+        object stackKey = this.GetCacheKey(data);
+        if (useCache && this.hasCachItem(stackKey))
         {
-            obj = _cacheItemStack.Pop();
-            obj.SetActive(true);
+            obj = this.PopItemFromCache(stackKey);
         } else
         {
+
             obj = this.createItem(data);            
         }
 
@@ -397,8 +485,7 @@ public class ScrollViewExtension : MonoBehaviour
                 
                 if (useCache)
                 {
-                    _cacheItemStack.Push(item);
-                    item.SetActive(false);                    
+                    this.PushItem2Cache(item);
                 } else
                 {
                     Destroy(item);
@@ -418,8 +505,7 @@ public class ScrollViewExtension : MonoBehaviour
                 _itemList.RemoveAt(0);
                 if (useCache)
                 {
-                    _cacheItemStack.Push(item);
-                    item.SetActive(false);
+                    this.PushItem2Cache(item);
                 }
                 else
                 {
@@ -478,9 +564,7 @@ public class ScrollViewExtension : MonoBehaviour
                 _itemList.RemoveAt(_itemList.Count - 1);
                 if (useCache)
                 {
-                    
-                    _cacheItemStack.Push(item);
-                    item.SetActive(false);
+                    this.PushItem2Cache(item);
                 }
                 else
                 {
@@ -501,8 +585,7 @@ public class ScrollViewExtension : MonoBehaviour
                 _itemList.RemoveAt(0);
                 if (useCache)
                 {
-                    _cacheItemStack.Push(item);
-                    item.SetActive(false);
+                    this.PushItem2Cache(item);
                 }
                 else
                 {
