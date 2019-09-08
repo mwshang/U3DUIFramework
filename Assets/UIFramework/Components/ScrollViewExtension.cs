@@ -98,7 +98,7 @@ public class ScrollViewExtension : MonoBehaviour
     public CreateItem createItem;
     public InitItem initItem;
     public Vector2 gap = new Vector2(2, 2);
-    public Vector2 minItemSize = new Vector2(600,100);
+    public Vector2 minItemSize = new Vector2(600, 100);
     // 是否使用缓存,默认使用,注意为了支持不同大小的 item,需要实现ICacheItem接口
     public bool useCache = true;
     public string cacheKey = null;//数据源的属性名,为了支持不同大小的 item需要 分类 存储
@@ -108,19 +108,19 @@ public class ScrollViewExtension : MonoBehaviour
     // protected
     protected ScrollRect scrollRect = null;
     protected RectTransform rtViewport = null;
-    protected RectTransform rtContent = null;    
+    protected RectTransform rtContent = null;
 
     protected List<GameObject> _itemList = new List<GameObject>();
-    protected Dictionary<object,Stack<GameObject>> _cacheItemStack;
+    protected Dictionary<object, Stack<GameObject>> _cacheItemStack;
 
 
     protected float _totalHeight = 0;
     protected Vector2 _lastChangeValue = Vector2.zero;
     protected int _displayCount = 1;
-    
+
     // private
     private List<object> _dataProvider;
-    private Dictionary<int,bool> _dicCreated = new Dictionary<int, bool>();
+    private Dictionary<int, bool> _dicCreated = new Dictionary<int, bool>();
     private bool isInited = false;
 
     ///////////////////////
@@ -149,14 +149,14 @@ public class ScrollViewExtension : MonoBehaviour
     private void Awake()
     {
         scrollRect = GetComponent<ScrollRect>();
-        rtViewport = scrollRect.gameObject.GetComponent<RectTransform>();     
+        rtViewport = scrollRect.gameObject.GetComponent<RectTransform>();
         rtContent = scrollRect.content;
 
         if (useCache)
         {
             _cacheItemStack = new Dictionary<object, Stack<GameObject>>();
         }
-        
+
     }
 
 
@@ -181,8 +181,9 @@ public class ScrollViewExtension : MonoBehaviour
             sizeDelta.y = this.rtViewport.sizeDelta.y;
             rt.sizeDelta = sizeDelta;
             //解决滑动条位置偏移问题,这块还有问题,用到滑动条的不多,有用到在解决
-            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x,rtViewport.sizeDelta.y);
-        } else
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, rtViewport.sizeDelta.y);
+        }
+        else
         {
             rtContent.pivot = new Vector2(0f, 0.5f);
             rtContent.anchorMin = new Vector2(0.5f, 0.5f);
@@ -196,7 +197,7 @@ public class ScrollViewExtension : MonoBehaviour
             Vector2 sizeDelta = scrollRect.horizontalScrollbar.GetComponent<RectTransform>().sizeDelta;
             sizeDelta.x = this.rtViewport.sizeDelta.x;
             scrollRect.horizontalScrollbar.GetComponent<RectTransform>().sizeDelta = sizeDelta;
-        }        
+        }
         this.GenerateList();
         this.isInited = true;
     }
@@ -214,11 +215,11 @@ public class ScrollViewExtension : MonoBehaviour
             {
                 this.GenerateList();
             }
-            
+
         }
     }
 
-    public  List<GameObject>  GetItemList()
+    public List<GameObject> GetItemList()
     {
         return this._itemList;
     }
@@ -226,19 +227,34 @@ public class ScrollViewExtension : MonoBehaviour
 
     protected void Clear()
     {
-        foreach(GameObject obj in _itemList)
+        foreach (GameObject obj in _itemList)
         {
-            if (useCache)
-            {
-                this.PushItem2Cache(obj);
-            }
-            else
-            {
-                Destroy(obj);
-            }
+            this.DestroyItem(obj, -1);
         }
         _itemList.Clear();
         this._dicCreated.Clear();
+    }
+
+    protected  void DestroyItem(GameObject item,int index)
+    {
+        if (index >= 0)
+        {
+            if (this._itemList.Count <=  this._displayCount)
+            {//数量不够一屏显示则不删除
+                return;
+            }
+
+            _itemList.RemoveAt(index);
+        }
+        
+        if (this.useCache)
+        {
+            this.PushItem2Cache(item);
+        }
+        else
+        {
+            Destroy(item);
+        }
     }
 
     protected object GetCacheKey(object data)
@@ -248,7 +264,7 @@ public class ScrollViewExtension : MonoBehaviour
             Debug.LogWarning("ScrollViewExtension::GetCacheKey  data is null,cache item maybe failed!!!!!!");
         }
         object rst = null;
-        if (data !=  null && !string.IsNullOrEmpty(cacheKey))
+        if (data != null && !string.IsNullOrEmpty(cacheKey))
         {
             System.Type type = data.GetType();
             rst = type.GetProperty(cacheKey).GetValue(data);
@@ -267,7 +283,7 @@ public class ScrollViewExtension : MonoBehaviour
         {
             Debug.LogWarning("ScrollViewExtension::GetCacheStack  ICacheItem is null,cache item maybe failed!!!!!!");
         }
-        object value = this.GetCacheKey(cacheItem != null? cacheItem.GetCacheItemData():null);
+        object value = this.GetCacheKey(cacheItem != null ? cacheItem.GetCacheItemData() : null);
         Stack<GameObject> stack = _cacheItemStack.TryGet(value);
         if (stack == null)
         {
@@ -276,7 +292,7 @@ public class ScrollViewExtension : MonoBehaviour
         }
         return stack;
     }
-   
+
 
     protected void PushItem2Cache(GameObject obj)
     {
@@ -291,17 +307,17 @@ public class ScrollViewExtension : MonoBehaviour
             key = "default";
         }
         Stack<GameObject> stack = _cacheItemStack.TryGet(key);
-        if  (stack  ==  null)
+        if (stack == null)
         {
             return null;
         }
 
-        GameObject  obj = stack.Pop();
+        GameObject obj = stack.Pop();
         obj.SetActive(true);
         return obj;
     }
 
-    protected bool hasCachItem(object  key)
+    protected bool hasCachItem(object key)
     {
         if (key == null)
         {
@@ -314,7 +330,7 @@ public class ScrollViewExtension : MonoBehaviour
         }
         return stack.Count > 0;
     }
-    
+
 
     protected void GenerateList()
     {
@@ -334,9 +350,39 @@ public class ScrollViewExtension : MonoBehaviour
                 {
                     object data = this._dataProvider[i];
                     this.CreateVerticalItem(data, i, CreateItemDir.SCROLL_DOWN);
-                }                
+                }
+
+                ////////////////////////
+                if (this._itemList.Count > 0)
+                {//修复item 大小不一致可能导致 初始化为 创建满屏BUG
+                    int cd = 0;
+                    while (cd < this._displayCount)
+                    {
+                        GameObject lastItem = this._itemList[this._itemList.Count - 1];
+                        RectTransform rt = lastItem.transform as RectTransform;
+                        float oy = rt.pivot.y * rt.sizeDelta.y;
+
+                        Vector2 pos = rt.parent.parent.InverseTransformPoint(rt.position);
+                        pos.y -= oy;
+
+                        if (pos.y <= this.gap.y)
+                        {
+                            break;
+                        }
+                        cd += 1;
+                        int index = int.Parse(lastItem.name) + 1;
+                        if (index >= this._dataProvider.Count)
+                        {
+                            break;
+                        }
+                        this.CreateVerticalItem(this._dataProvider[index], index, CreateItemDir.SCROLL_DOWN);
+                    }
+                }
+                //===================
+
                 scrollRect.verticalScrollbar.value = 1;
-            } else
+            }
+            else
             {
                 _displayCount = (int)(rtViewport.sizeDelta.x / (minItemSize.x + gap.x)) + 1;
                 int count = Mathf.Clamp(this._dataProvider.Count, 0, _displayCount);
@@ -357,14 +403,17 @@ public class ScrollViewExtension : MonoBehaviour
         if (this.scrollType == ScrollType.Vertical)
         {
             float contentHeight = this._dataProvider.Count * minItemSize.y + (this._dataProvider.Count - 1) * this.gap.y;
+            contentHeight = Mathf.Clamp(contentHeight, this.rtViewport.sizeDelta.y, contentHeight);
             this.rtContent.sizeDelta = new Vector2(this.rtViewport.sizeDelta.x, contentHeight);
-            this.rtContent.anchoredPosition = new Vector2(0,this.rtContent.anchoredPosition.y);
-        } else
+            this.rtContent.anchoredPosition = new Vector2(0, this.rtContent.anchoredPosition.y);
+        }
+        else
         {
             float contentWidth = this._dataProvider.Count * minItemSize.x + (this._dataProvider.Count - 1) * this.gap.x;
+            contentWidth = Mathf.Clamp(contentWidth, this.rtViewport.sizeDelta.x, contentWidth);
             this.rtContent.sizeDelta = new Vector2(contentWidth, this.rtViewport.sizeDelta.y);
             this.rtContent.anchoredPosition = new Vector2(this.rtContent.anchoredPosition.x, 0);
-  
+
         }
     }
 
@@ -375,10 +424,11 @@ public class ScrollViewExtension : MonoBehaviour
         if (useCache && this.hasCachItem(stackKey))
         {
             obj = this.PopItemFromCache(stackKey);
-        } else
+        }
+        else
         {
 
-            obj = this.createItem(data);            
+            obj = this.createItem(data);
         }
 
         obj.name = index.ToString();
@@ -411,7 +461,7 @@ public class ScrollViewExtension : MonoBehaviour
     ///  竖向滚动逻辑
     //////////////////////////////////////////////////////////////////////////////////////
 
-    protected GameObject CreateVerticalItem(object data,int index, CreateItemDir dir)
+    protected GameObject CreateVerticalItem(object data, int index, CreateItemDir dir)
     {
         GameObject obj = this.CreateListItem(data, index);
 
@@ -427,6 +477,7 @@ public class ScrollViewExtension : MonoBehaviour
             float deltaH = rectTrans.sizeDelta.y - this.minItemSize.y;
             Vector2 size = this.rtContent.sizeDelta;
             size.y += deltaH;
+            size.y = Mathf.Clamp(size.y, this.rtViewport.sizeDelta.y, size.y);
             this.rtContent.sizeDelta = size;
         }
 
@@ -443,7 +494,8 @@ public class ScrollViewExtension : MonoBehaviour
             rectTrans.anchoredPosition = new Vector3(0, py, rectTrans.position.z);
 
             _itemList.Add(obj);
-        } else
+        }
+        else
         {
             GameObject fstItem = _itemList[0];
             RectTransform fstRT = fstItem.GetComponent<RectTransform>();
@@ -454,7 +506,7 @@ public class ScrollViewExtension : MonoBehaviour
         }
 
         return obj;
-    }    
+    }
 
     protected void HandleVerticalValueChanged(bool isScrollUp)
     {
@@ -481,15 +533,7 @@ public class ScrollViewExtension : MonoBehaviour
             p = rt.parent.parent.InverseTransformPoint(rt.position);
             if (p.y < -this.rtViewport.sizeDelta.y - rt.pivot.y * rt.sizeDelta.y)
             {
-                _itemList.RemoveAt(_itemList.Count - 1);
-                
-                if (useCache)
-                {
-                    this.PushItem2Cache(item);
-                } else
-                {
-                    Destroy(item);
-                }
+                DestroyItem(item,_itemList.Count - 1);
             }
 
         }
@@ -502,15 +546,7 @@ public class ScrollViewExtension : MonoBehaviour
 
             if (p.y > rt.pivot.y * rt.sizeDelta.y)
             {
-                _itemList.RemoveAt(0);
-                if (useCache)
-                {
-                    this.PushItem2Cache(item);
-                }
-                else
-                {
-                    Destroy(item);
-                }
+                DestroyItem(item, 0);
             }
 
             //处理最后一个元素,向上越过底部则创建
@@ -547,7 +583,7 @@ public class ScrollViewExtension : MonoBehaviour
 
             if (p.x - rt.pivot.x * rt.sizeDelta.x > 0)
             {
-                
+
                 int index = int.Parse(item.name) - 1;
                 if (index >= 0)
                 {
@@ -561,36 +597,21 @@ public class ScrollViewExtension : MonoBehaviour
             p = rt.parent.parent.InverseTransformPoint(rt.position);
             if (p.x > this.rtViewport.sizeDelta.x + rt.pivot.x * rt.sizeDelta.x)
             {
-                _itemList.RemoveAt(_itemList.Count - 1);
-                if (useCache)
-                {
-                    this.PushItem2Cache(item);
-                }
-                else
-                {
-                    Destroy(item);
-                }
+                DestroyItem(item, _itemList.Count - 1);
             }
 
-        } else 
+        }
+        else
         {
-            
+
             // 处理第一元素,如果超出了就删除
             GameObject item = _itemList[0];
             RectTransform rt = item.GetComponent<RectTransform>();
             Vector3 p = rt.parent.parent.InverseTransformPoint(rt.position);
-            
+
             if (p.x < rt.pivot.x * (1 - rt.sizeDelta.x))
             {
-                _itemList.RemoveAt(0);
-                if (useCache)
-                {
-                    this.PushItem2Cache(item);
-                }
-                else
-                {
-                    Destroy(item);
-                }
+                DestroyItem(item, 0);
             }
 
             //处理最后一个元素,向上越过底部则创建
@@ -624,6 +645,7 @@ public class ScrollViewExtension : MonoBehaviour
             float deltaW = rectTrans.sizeDelta.x - this.minItemSize.x;
             Vector2 size = this.rtContent.sizeDelta;
             size.x += deltaW;
+            size.x = Mathf.Clamp(size.x, this.rtViewport.sizeDelta.x, size.x);
             this.rtContent.sizeDelta = size;
         }
         if (dir == CreateItemDir.SCROLL_RIGHT)
@@ -691,7 +713,7 @@ public class ScrollViewExtension : MonoBehaviour
             duration = (float)(type.GetProperty("duration").GetValue(arg));
         }
         ExpandCompleteCallback onComplete = null;
-        if (type.GetProperty("onComplete")  != null)
+        if (type.GetProperty("onComplete") != null)
         {
             onComplete = (ExpandCompleteCallback)(type.GetProperty("onComplete").GetValue(arg));
         }
@@ -719,7 +741,9 @@ public class ScrollViewExtension : MonoBehaviour
         //  上部分 的位置保持不变,设置 sizeDelta时位置 会变化
         Vector2 pos = this.rtContent.anchoredPosition;
         pos.y = pos.y - deltaSize.y * 0.5f;
-        this.rtContent.sizeDelta = new Vector2(this.rtContent.sizeDelta.x, this.rtContent.sizeDelta.y + deltaSize.y);
+        float contentHeight = this.rtContent.sizeDelta.y + deltaSize.y;
+        contentHeight = Mathf.Clamp(contentHeight, this.rtViewport.sizeDelta.y, contentHeight);
+        this.rtContent.sizeDelta = new Vector2(this.rtContent.sizeDelta.x, contentHeight);
         this.rtContent.anchoredPosition = pos;
         //===
 
@@ -743,9 +767,9 @@ public class ScrollViewExtension : MonoBehaviour
         }
 
     }
-    
 
-    protected void  _doExpanding(GameObject item,Vector2 to, Vector2 deltaSize, float duration, ExpandCompleteCallback onComplete=null)
+
+    protected void _doExpanding(GameObject item, Vector2 to, Vector2 deltaSize, float duration, ExpandCompleteCallback onComplete = null)
     {
         RectTransform itemRT = item.GetComponent<RectTransform>();
         List<GameObject> afters = this.getGroupByItem(item);
@@ -777,12 +801,13 @@ public class ScrollViewExtension : MonoBehaviour
 
         bool found = false;
 
-        foreach(GameObject obj in this._itemList)
+        foreach (GameObject obj in this._itemList)
         {
             if (obj == item)
             {
                 found = true;
-            } else if (found)
+            }
+            else if (found)
             {
                 afters.Add(obj);
             }
