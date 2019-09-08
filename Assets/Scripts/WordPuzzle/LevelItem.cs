@@ -80,10 +80,10 @@ public class LevelItem : MonoBehaviour,ICacheItem
         
     }
 
-    public object GetTypeByAttri(string attri)
-    {
-        return this.data.GetType().GetProperty(attri).GetValue(this.data);
-    }
+    //public object GetTypeByAttri(string attri)
+    //{
+    //    return this.data.GetType().GetProperty(attri).GetValue(this.data);
+    //}
 
     public object GetCacheItemData()
     {

@@ -25,7 +25,7 @@ public class WordPuzzleLevels : FirstPanel
         sve.cacheKey = "key";
 
         List<object> list = new List<object>();
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 30; i++)
         {
             list.Add(new { id = i, key = i % 2 == 0 ? 0 : 1 });
         }
