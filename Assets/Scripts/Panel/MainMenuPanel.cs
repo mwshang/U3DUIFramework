@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class MainMenuPanel : BasePanel
 { 
@@ -12,5 +13,11 @@ public class MainMenuPanel : BasePanel
         //UIManager.instance.PushStack(panelType);
         UIManager.instance.OpenPanel(panelType);
     }
+
+    public void LoadWordPuzzle()
+    {
+        SceneManager.LoadScene("WordPuzzle");
+    }
+
 
 }

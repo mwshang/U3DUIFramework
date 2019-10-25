@@ -48,7 +48,5 @@ public class SubLevelItem : MonoBehaviour
     {
         this.SetSelected(toggle.isOn);
         this.SendMessageUpwards("OnFstLevelSelected", new {data=this._data,isSelected=toggle.isOn });
-
-        
     }
 }

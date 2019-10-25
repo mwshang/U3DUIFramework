@@ -4,5 +4,11 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/UIFramework.unity
+    guid: dcca8328deb9067499501b29f2477899
+  - enabled: 1
+    path: Assets/Scenes/WordPuzzle.unity
+    guid: 9b135ede3f336254d8c1e2d92a7d7421
   m_configObjects: {}
